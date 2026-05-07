@@ -68,7 +68,7 @@ EazySillyTavern **不重新实现** SillyTavern 的任何业务逻辑。UI、角
 
 > 不支持 Intel Mac、不支持 macOS 14 及更早版本——这些设备请使用 SillyTavern 官方源码部署。
 
-1. 打开 **[Releases 页面](https://github.com/yuman07/EazySillyTavern/releases/latest)**，下载 `EazySillyTavern-{version}-mac-arm64.dmg`。
+1. 打开 **[Releases 页面](https://github.com/yuman07/EazySillyTavern/releases/latest)**，下载 `EazySillyTavern_macOS15_arm64_{version}.dmg`。
 2. 打开 dmg，把 `EazySillyTavern.app` 拖到 `应用程序 / Applications` 文件夹。
 3. 首次启动需要绕过 Gatekeeper，下面三种任选其一：
 
@@ -98,7 +98,7 @@ xattr -cr /Applications/EazySillyTavern.app
 
 > 不支持 Windows ARM64。EazySillyTavern 是 **portable executable**——**不写注册表**、**不安装到 Program Files**。删除 `.exe` 即等于卸载。
 
-1. 打开 **[Releases 页面](https://github.com/yuman07/EazySillyTavern/releases/latest)**，下载 `EazySillyTavern-{version}-win-x64.exe`。
+1. 打开 **[Releases 页面](https://github.com/yuman07/EazySillyTavern/releases/latest)**，下载 `EazySillyTavern_Windows10_x64_{version}.exe`。
 2. 把 `.exe` 放到任意目录（桌面、专门的文件夹、U 盘都行）双击启动。
 3. SmartScreen 会弹出蓝色提示 **"Windows 已保护你的电脑"**：
    1. 点击左下角的 **「更多信息 / More info」** 链接。

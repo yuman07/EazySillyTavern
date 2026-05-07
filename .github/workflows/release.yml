@@ -1,16 +1,75 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semver version without v prefix (e.g. 1.0.0, 1.2.3-beta.1)"
+        required: true
+        type: string
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ inputs.version }}
+  cancel-in-progress: false
+
 jobs:
+  validate:
+    name: Validate version input
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.derive.outputs.tag }}
+      prerelease: ${{ steps.derive.outputs.prerelease }}
+    steps:
+      - name: Check semver format
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if ! [[ "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::version input '$INPUT_VERSION' is not valid semver (no 'v' prefix). Example: 1.0.0 or 1.2.3-beta.1"
+            exit 1
+          fi
+      - name: Derive tag and prerelease flag
+        id: derive
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          tag="v${INPUT_VERSION}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          if [[ "${tag}" =~ -(alpha|beta|rc) ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  create_release:
+    name: Create draft release
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+      - name: Create draft GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          PRERELEASE: ${{ needs.validate.outputs.prerelease }}
+        run: |
+          flags=(--draft --target "$GITHUB_SHA" --title "EazySillyTavern $TAG" --notes "Release $TAG")
+          if [ "$PRERELEASE" = "true" ]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "$TAG" "${flags[@]}"
+
   build:
     name: Build (${{ matrix.target }})
+    needs: [validate, create_release]
     strategy:
       fail-fast: false
       matrix:
@@ -18,20 +77,25 @@ jobs:
           - os: macos-26
             target: mac-arm64
             build_script: build:mac
+            artifact_glob: "dist/EazySillyTavern_macOS15_arm64_*.dmg"
           - os: windows-2025
             target: win-x64
             build_script: build:win
+            artifact_glob: "dist/EazySillyTavern_Windows10_x64_*.exe"
 
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: 24.15.0
 
       - name: Install Electron shell dependencies
         run: npm install --no-audit --no-fund --no-progress
@@ -40,42 +104,36 @@ jobs:
         run: npm run prep
 
       - name: Build
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run ${{ matrix.build_script }}
 
       - name: List build outputs
         shell: bash
         run: ls -la dist/
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: EazySillyTavern-${{ matrix.target }}
-          path: |
-            dist/EazySillyTavern-*.dmg
-            dist/EazySillyTavern-*.exe
-          if-no-files-found: error
-
-  release:
-    name: Publish GitHub Release
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: artifacts
-
-      - name: Flatten artifacts
+      - name: Upload artifact to draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          ARTIFACT_GLOB: ${{ matrix.artifact_glob }}
         run: |
-          mkdir -p release-assets
-          find artifacts -type f \( -name "*.dmg" -o -name "*.exe" \) -exec cp -v {} release-assets/ \;
-          ls -la release-assets/
+          shopt -s nullglob
+          files=( $ARTIFACT_GLOB )
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::No artifacts matched glob: $ARTIFACT_GLOB"
+            exit 1
+          fi
+          gh release upload "$TAG" "${files[@]}" --clobber
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
-        with:
-          files: release-assets/*
-          fail_on_unmatched_files: true
-          generate_release_notes: true
+  publish:
+    name: Publish release
+    needs: [validate, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Mark release as non-draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release edit "$TAG" --draft=false

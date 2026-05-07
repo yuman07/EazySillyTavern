@@ -68,7 +68,7 @@ EazySillyTavern does **not** reimplement any SillyTavern feature. The UI, charac
 
 > Intel Macs and macOS 14 or earlier are not supported — install SillyTavern from source instead.
 
-1. Go to **[Releases](https://github.com/yuman07/EazySillyTavern/releases/latest)** and download `EazySillyTavern-{version}-mac-arm64.dmg`.
+1. Go to **[Releases](https://github.com/yuman07/EazySillyTavern/releases/latest)** and download `EazySillyTavern_macOS15_arm64_{version}.dmg`.
 2. Open the dmg and drag `EazySillyTavern.app` into the `Applications` folder.
 3. The first launch needs to bypass Gatekeeper. Pick whichever you prefer:
 
@@ -98,7 +98,7 @@ Then double-click as usual.
 
 > Windows ARM64 is not supported. EazySillyTavern is shipped as a **portable executable** — it does **not** write the Windows registry and does **not** install into Program Files. Deleting the `.exe` is the uninstall.
 
-1. Go to **[Releases](https://github.com/yuman07/EazySillyTavern/releases/latest)** and download `EazySillyTavern-{version}-win-x64.exe`.
+1. Go to **[Releases](https://github.com/yuman07/EazySillyTavern/releases/latest)** and download `EazySillyTavern_Windows10_x64_{version}.exe`.
 2. Move the `.exe` to wherever you want it to live (Desktop, dedicated folder, USB drive…). Double-click to launch.
 3. SmartScreen will show a blue dialog **"Windows protected your PC"**:
    1. Click the small **"More info"** link.

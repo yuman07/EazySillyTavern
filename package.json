@@ -1,7 +1,7 @@
 {
   "name": "eazysillytavern",
   "productName": "EazySillyTavern",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Zero-dependency desktop launcher for SillyTavern. Download, double-click, use.",
   "main": "src/main.js",
   "private": true,

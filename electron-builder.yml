@@ -51,7 +51,7 @@ mac:
   gatekeeperAssess: false
   identity: null
   icon: build/icon.png
-  artifactName: "EazySillyTavern-${version}-mac-arm64.${ext}"
+  artifactName: "EazySillyTavern_macOS15_arm64_${version}.${ext}"
   electronLanguages:
     - en
     - en_GB
@@ -60,7 +60,7 @@ mac:
 
 dmg:
   writeUpdateInfo: false
-  artifactName: "EazySillyTavern-${version}-mac-arm64.${ext}"
+  artifactName: "EazySillyTavern_macOS15_arm64_${version}.${ext}"
 
 win:
   target:
@@ -68,7 +68,7 @@ win:
       arch: x64
   icon: build/icon.png
   signAndEditExecutable: false
-  artifactName: "EazySillyTavern-${version}-win-x64.${ext}"
+  artifactName: "EazySillyTavern_Windows10_x64_${version}.${ext}"
   electronLanguages:
     - en-US
     - en-GB
@@ -76,7 +76,7 @@ win:
     - zh-TW
 
 portable:
-  artifactName: "EazySillyTavern-${version}-win-x64.${ext}"
+  artifactName: "EazySillyTavern_Windows10_x64_${version}.${ext}"
 
 # Disable electron-builder's auto-publish; releases are uploaded by GitHub Actions.
 publish: null

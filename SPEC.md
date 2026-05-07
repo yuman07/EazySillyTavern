@@ -53,7 +53,7 @@ EazySillyTavern 不重新实现 SillyTavern 的任何业务逻辑——它是一
 | 自动更新 | 不做。仅在启动时静默检查 GitHub Release，发现新版在 UI 上提示并提供下载页跳转 |
 | Extensions 生态 | 保留 SillyTavern 原生 Extensions 系统（JS-only），不集成 SillyTavern Extras（Python） |
 | 数据迁移 | 不提供从原版 SillyTavern 导入数据的功能 |
-| 构建发布 | GitHub Actions 在 `macos-26`（arm64）+ `windows-2025` runner 上自动构建，push tag 触发，产物上传到 GitHub Release |
+| 构建发布 | GitHub Actions 在 `macos-26`（arm64）+ `windows-2025` runner 上自动构建，`workflow_dispatch` 手动触发（通过 `gh workflow run` 传入版本号），产物上传到 GitHub Release |
 
 ---
 
@@ -63,8 +63,8 @@ EazySillyTavern 不重新实现 SillyTavern 的任何业务逻辑——它是一
 
 用户访问 EazySillyTavern 的 GitHub Release 页面，根据自己的系统选择对应安装包：
 
-- **Windows x64 用户** → 下载 `EazySillyTavern-{version}-win-x64.exe`
-- **macOS Apple Silicon 用户** → 下载 `EazySillyTavern-{version}-mac-arm64.dmg`
+- **Windows x64 用户** → 下载 `EazySillyTavern_Windows10_x64_{version}.exe`
+- **macOS Apple Silicon 用户** → 下载 `EazySillyTavern_macOS15_arm64_{version}.dmg`
 
 README 顶部贴出两个直达下载链接，并附简明的"哪个适合我"说明。
 
@@ -291,7 +291,7 @@ EazySillyTavern 自身的所有用户可见文案（splash 标题与提示、应
 EazySillyTavern 仓库通过一个明确的版本指针（如 `sillytavern.version` 或 git submodule pin）锁定 SillyTavern 版本：
 
 - 由维护者**手动**触发 bump（不引入 dependabot 类机器人，避免自动 PR 干扰）。
-- bump 流程：更新版本指针 → 本地跑一遍验证 → push tag → CI 自动 build + release。
+- bump 流程：更新版本指针 → 本地跑一遍验证 → `gh workflow run` 手动触发 release workflow → CI 自动 build + release。
 - 每次 EazySillyTavern release 的 changelog 必须明确标注内嵌的 SillyTavern 版本变化。
 
 ---

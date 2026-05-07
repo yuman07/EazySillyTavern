@@ -86,6 +86,17 @@ function postToSplash(channel, payload) {
 }
 
 function createMainWindow(serviceUrl) {
+  // Make the OS title bar blend with SillyTavern's dark theme: macOS hides the
+  // chrome and floats traffic lights over the page; Windows paints its window
+  // controls with a matching dark fill.
+  const titleBarOpts = process.platform === 'darwin'
+    ? { titleBarStyle: 'hiddenInset' }
+    : process.platform === 'win32'
+      ? {
+          titleBarStyle: 'hidden',
+          titleBarOverlay: { color: '#111827', symbolColor: '#e5e7eb', height: 32 },
+        }
+      : {};
   const win = new BrowserWindow({
     width: MAIN_WIDTH,
     height: MAIN_HEIGHT,
@@ -94,6 +105,7 @@ function createMainWindow(serviceUrl) {
     show: false,
     backgroundColor: '#111827',
     title: 'EazySillyTavern',
+    ...titleBarOpts,
     webPreferences: {
       contextIsolation: true,
       sandbox: true,
@@ -103,6 +115,15 @@ function createMainWindow(serviceUrl) {
   });
   win.loadURL(serviceUrl);
   win.once('ready-to-show', () => win.show());
+
+  // hiddenInset removes the OS drag handle, and Windows' titleBarOverlay only
+  // covers its own button strip — the rest of the top has to be a draggable
+  // region we inject ourselves. Re-inject on every load (SillyTavern is an SPA
+  // but full reloads do happen, e.g. settings changes).
+  const dragRegionScript = buildDragRegionScript();
+  win.webContents.on('did-finish-load', () => {
+    win.webContents.executeJavaScript(dragRegionScript).catch(() => { /* ignore */ });
+  });
 
   // Open links that target _blank in the system browser, do not let SillyTavern spawn child windows.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -114,6 +135,35 @@ function createMainWindow(serviceUrl) {
     isQuitting = true;
   });
   return win;
+}
+
+function buildDragRegionScript() {
+  // macOS traffic lights occupy roughly the leftmost 78px; leave that gap so
+  // close/minimize/maximize remain clickable. Windows' overlay handles its own
+  // controls, so only the right-edge ~140px is reserved.
+  const leftGap = process.platform === 'darwin' ? 78 : 0;
+  const rightGap = process.platform === 'win32' ? 140 : 0;
+  const height = 28;
+  return `
+    (() => {
+      const id = 'eazy-drag-region';
+      if (document.getElementById(id)) return;
+      const root = document.documentElement;
+      const drag = document.createElement('div');
+      drag.id = id;
+      drag.style.cssText = [
+        'position:fixed',
+        'top:0',
+        'left:${leftGap}px',
+        'right:${rightGap}px',
+        'height:${height}px',
+        '-webkit-app-region:drag',
+        'z-index:2147483647',
+        'pointer-events:auto',
+      ].join(';');
+      root.appendChild(drag);
+    })();
+  `;
 }
 
 function setStatus(key, vars) {

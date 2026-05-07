@@ -62,6 +62,29 @@ function createSplashWindow() {
   return win;
 }
 
+// IPC dispatch helpers buffer messages sent before the splash webContents
+// finishes loading. Without this, an immediate failure (e.g. missing_bundle)
+// dispatches splash:error before the renderer is ready and the message is
+// silently dropped, leaving the splash stuck on the loading state.
+const splashOutbox = [];
+let splashReady = false;
+
+function flushSplashOutbox() {
+  if (!splashWindow || splashWindow.isDestroyed()) return;
+  while (splashOutbox.length > 0) {
+    const { channel, payload } = splashOutbox.shift();
+    splashWindow.webContents.send(channel, payload);
+  }
+}
+
+function postToSplash(channel, payload) {
+  if (splashReady && splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.webContents.send(channel, payload);
+  } else {
+    splashOutbox.push({ channel, payload });
+  }
+}
+
 function createMainWindow(serviceUrl) {
   const win = new BrowserWindow({
     width: MAIN_WIDTH,
@@ -94,18 +117,20 @@ function createMainWindow(serviceUrl) {
 }
 
 function setStatus(key, vars) {
-  if (!splashWindow || splashWindow.isDestroyed()) return;
-  splashWindow.webContents.send('splash:status', i18n.t(key, vars));
+  postToSplash('splash:status', i18n.t(key, vars));
 }
 
 function setError(key, vars) {
-  if (!splashWindow || splashWindow.isDestroyed()) return;
-  splashWindow.webContents.send('splash:error', i18n.t(key, vars));
+  postToSplash('splash:error', i18n.t(key, vars));
 }
 
 function wireSplashIpc() {
   ipcMain.on('splash:request-strings', (event) => {
+    // The splash sends this once its preload + script have run, so it doubles
+    // as our "renderer is alive" signal — flush anything we tried to send before.
+    splashReady = true;
     event.sender.send('splash:strings', i18n.getAllStrings());
+    flushSplashOutbox();
   });
   ipcMain.on('splash:view-log', () => {
     if (logger) shell.showItemInFolder(logger.filePath);

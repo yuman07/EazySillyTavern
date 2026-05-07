@@ -125,6 +125,54 @@
           "store_path": "/nix/store/6x6v11xjf0psckgqmyhfyhw9bdma0rn6-nodejs-22.22.2"
         }
       }
+    },
+    "unzip@latest": {
+      "last_modified": "2026-04-23T13:07:47Z",
+      "resolved": "github:NixOS/nixpkgs/01fbdeef22b76df85ea168fbfe1bfd9e63681b30#unzip",
+      "source": "devbox-search",
+      "version": "6.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/gvs5ahxqw2qhda5iz3mkkqf5vwdiag95-unzip-6.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/gvs5ahxqw2qhda5iz3mkkqf5vwdiag95-unzip-6.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/nq9p1mx1lww1vzh0nc692yqrr0cnhkc1-unzip-6.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/nq9p1mx1lww1vzh0nc692yqrr0cnhkc1-unzip-6.0"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/ad88pqx8njan5cv9a2i8ciak674z5c1v-unzip-6.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/ad88pqx8njan5cv9a2i8ciak674z5c1v-unzip-6.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/d728bq0ajg6r80j9avj2mn82h3alhl88-unzip-6.0",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/d728bq0ajg6r80j9avj2mn82h3alhl88-unzip-6.0"
+        }
+      }
     }
   }
 }

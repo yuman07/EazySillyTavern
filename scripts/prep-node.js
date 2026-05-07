@@ -26,7 +26,16 @@ const SUPPORTED = {
   'linux-arm64':  { archive: `node-v${nodeVersion}-linux-arm64.tar.gz`,  binPath: `node-v${nodeVersion}-linux-arm64/bin/node`,  outName: 'node' },
 };
 
-const platformKey = `${process.platform}-${process.arch}`;
+// Allow overriding the target platform from the CLI for cross-compile builds.
+// Examples:
+//   node scripts/prep-node.js --target=win32-x64
+//   EAZY_TARGET=darwin-arm64 node scripts/prep-node.js
+const cliTarget = (() => {
+  const arg = process.argv.find((a) => a.startsWith('--target='));
+  if (arg) return arg.slice('--target='.length);
+  return process.env.EAZY_TARGET;
+})();
+const platformKey = cliTarget || `${process.platform}-${process.arch}`;
 const target = SUPPORTED[platformKey];
 if (!target) {
   console.error(`Unsupported build host platform: ${platformKey}`);
@@ -59,6 +68,13 @@ function alreadyPrepared() {
   return existing.version === nodeVersion && existing.platformKey === platformKey;
 }
 
+// Force flag: --force or as the last positional CLI arg (preserves the prior
+// behaviour of `node prep-node.js --force` while also supporting --force= as
+// a peer of --target=).
+function shouldForce() {
+  return process.argv.includes('--force');
+}
+
 function rimraf(p) {
   if (!fs.existsSync(p)) return;
   fs.rmSync(p, { recursive: true, force: true });
@@ -85,9 +101,17 @@ function download(url, destFile) {
 }
 
 function extractBinary() {
-  // Use system `tar`: macOS, modern Linux, and Windows 10 1803+ all ship one that handles .tar.gz and .zip.
-  console.log(`> tar -xf ${tmpArchive} -C ${tmpDir} ${target.binPath}`);
-  execFileSync('tar', ['-xf', tmpArchive, '-C', tmpDir, target.binPath], { stdio: 'inherit' });
+  // tar.gz → tar (any tar implementation)
+  // .zip → unzip (GNU tar can't read zip; bsdtar can but isn't always on PATH)
+  if (target.archive.endsWith('.tar.gz') || target.archive.endsWith('.tar.xz')) {
+    console.log(`> tar -xf ${tmpArchive} -C ${tmpDir} ${target.binPath}`);
+    execFileSync('tar', ['-xf', tmpArchive, '-C', tmpDir, target.binPath], { stdio: 'inherit' });
+  } else if (target.archive.endsWith('.zip')) {
+    console.log(`> unzip -o -q ${tmpArchive} ${target.binPath} -d ${tmpDir}`);
+    execFileSync('unzip', ['-o', '-q', tmpArchive, target.binPath, '-d', tmpDir], { stdio: 'inherit' });
+  } else {
+    throw new Error(`Unsupported archive format: ${target.archive}`);
+  }
   fs.mkdirSync(outDir, { recursive: true });
   const extractedPath = path.join(tmpDir, target.binPath);
   fs.copyFileSync(extractedPath, outBin);
@@ -97,7 +121,7 @@ function extractBinary() {
 }
 
 async function main() {
-  if (alreadyPrepared() && process.argv[2] !== '--force') {
+  if (alreadyPrepared() && !shouldForce()) {
     console.log(`Bundled Node ${nodeVersion} (${platformKey}) already at ${outBin}. Use --force to refetch.`);
     return;
   }

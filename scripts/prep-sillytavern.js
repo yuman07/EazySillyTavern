@@ -158,10 +158,11 @@ function pruneNodeModules(rootDir) {
 }
 
 function installProductionDeps(dir) {
-  // On Windows, npm ships as npm.cmd; Node's execFileSync won't auto-resolve PATHEXT,
-  // so we pick the right binary name explicitly.
-  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  run(npmCmd, ['install', '--omit=dev', '--omit=optional', '--no-audit', '--no-fund', '--no-progress'], { cwd: dir });
+  // npm on Windows is npm.cmd; Node 21.7+/24 also rejects execFile of .cmd/.bat
+  // without shell:true (CVE-2024-27980 mitigation). Args here are hardcoded.
+  const isWin = process.platform === 'win32';
+  const npmCmd = isWin ? 'npm.cmd' : 'npm';
+  run(npmCmd, ['install', '--omit=dev', '--omit=optional', '--no-audit', '--no-fund', '--no-progress'], { cwd: dir, shell: isWin });
 }
 
 function moveDir(from, to) {

@@ -138,7 +138,7 @@ EazySillyTavern is a launcher and distribution shell — all SillyTavern feature
 # Then:
 devbox shell                          # 进入隔离环境 / enter isolated env
 npm install                           # 装 Electron / install Electron
-npm run prep                          # 拉 Node 22 二进制 + SillyTavern 1.18.0 + 装 ST 生产依赖
+npm run prep                          # 拉 Node 24 二进制 + SillyTavern 1.18.0 + 装 ST 生产依赖
 npm start                             # 启动 / launch
 ```
 

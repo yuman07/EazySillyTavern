@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-// Downloads the official Node 22 LTS binary for the current build host's platform/arch
+// Downloads the official Node 24 LTS binary for the current build host's platform/arch
 // and places it at resources/node/node[.exe]. SPEC §四 requires bundling a real Node
 // because Electron's BoringSSL lacks SHAKE algorithms that SillyTavern needs.
 

@@ -146,10 +146,12 @@ npm start                             # 启动 / launch
 
 ```bash
 devbox run -- npm run release:mac     # macOS arm64 .dmg
-devbox run -- npm run release:win     # Windows x64 portable .exe
+devbox run -- npm run release:win     # Windows x64 portable .exe (cross-builds OK on macOS)
 ```
 
 构建产物在 `dist/` 下。CI（`.github/workflows/release.yml`）在 push tag `v*` 时自动构建并发布到 GitHub Release。
+
+> **本地 mac dmg 出错回退**：在某些 macOS 主机上 electron-builder 内嵌的 dmgbuild 会因为 Spotlight / DiskArbitration 占住 `hdiutil` 卷而以 `couldn't unmount diskN - 资源忙` 失败。这是 dmgbuild Python 那一层的环境问题，与 EazySillyTavern 代码无关。先跑 `npm run build:mac` 出 `.app`，再跑 `npm run build:mac:dmg-fallback` 用裸 `hdiutil` 包成 dmg，可绕过这一层。CI runner 是干净环境，不会触发该问题，正常 `release:mac` 就够。
 
 Build outputs land in `dist/`. The CI workflow at `.github/workflows/release.yml` triggers on `v*` tags and publishes to GitHub Release automatically.
 

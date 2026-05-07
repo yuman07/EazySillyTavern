@@ -28,6 +28,7 @@
     "prep:sillytavern": "node scripts/prep-sillytavern.js",
     "prep": "npm run prep:node && npm run prep:sillytavern",
     "build:mac": "electron-builder --mac --arm64",
+    "build:mac:dmg-fallback": "node scripts/pack-mac-dmg.js",
     "build:win": "electron-builder --win --x64",
     "release:mac": "npm run prep && npm run build:mac",
     "release:win": "npm run prep && npm run build:win"

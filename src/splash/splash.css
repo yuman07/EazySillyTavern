@@ -31,15 +31,8 @@ html, body {
 .logo {
   width: 44px;
   height: 44px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #6366f1, #ec4899);
-  font-weight: 700;
-  font-size: 14px;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  letter-spacing: 0.5px;
+  display: block;
+  flex-shrink: 0;
 }
 
 h1 {

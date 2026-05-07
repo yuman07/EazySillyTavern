@@ -53,7 +53,7 @@ EazySillyTavern 不重新实现 SillyTavern 的任何业务逻辑——它是一
 | 自动更新 | 不做。仅在启动时静默检查 GitHub Release，发现新版在 UI 上提示并提供下载页跳转 |
 | Extensions 生态 | 保留 SillyTavern 原生 Extensions 系统（JS-only），不集成 SillyTavern Extras（Python） |
 | 数据迁移 | 不提供从原版 SillyTavern 导入数据的功能 |
-| 构建发布 | GitHub Actions 在 `macos-15`（arm64）+ `windows-2022` runner 上自动构建，push tag 触发，产物上传到 GitHub Release |
+| 构建发布 | GitHub Actions 在 `macos-26`（arm64）+ `windows-2025` runner 上自动构建，push tag 触发，产物上传到 GitHub Release |
 
 ---
 

@@ -167,7 +167,9 @@ class ServiceController {
       signal.childExited = true;
       const prevStatus = this.state.status;
       this.state.status = 'exited';
-      if (prevStatus === 'ready') {
+      // Only treat this as a runtime crash if we did not initiate the shutdown
+      // ourselves (signal.aborted is set by stop()).
+      if (prevStatus === 'ready' && !signal.aborted) {
         for (const fn of this._exitListeners) {
           try { fn({ code, signal: sig }); } catch (e) { this.logger.error(String(e)); }
         }
@@ -207,10 +209,14 @@ class ServiceController {
     const child = this.child;
     if (!child || child.killed || child.exitCode !== null) return;
     return new Promise((resolve) => {
-      const finish = () => resolve();
+      let killTimer;
+      const finish = () => {
+        if (killTimer) clearTimeout(killTimer);
+        resolve();
+      };
       child.once('exit', finish);
       try { child.kill('SIGTERM'); } catch { /* ignore */ }
-      const killTimer = setTimeout(() => {
+      killTimer = setTimeout(() => {
         try { child.kill('SIGKILL'); } catch { /* ignore */ }
       }, SHUTDOWN_GRACE_MS);
       killTimer.unref();

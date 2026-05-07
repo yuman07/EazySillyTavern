@@ -1,6 +1,10 @@
 appId: com.eazysillytavern.app
 productName: EazySillyTavern
 copyright: Copyright (c) ${author}
+# Maximum compression: dmg uses ULFO (LZFSE) instead of bzip2, exe uses LZMA.
+# Squeezes the bundled SillyTavern node_modules (~363MB raw) under SPEC §十一-12's
+# 250MB budget for the dmg / portable exe.
+compression: maximum
 
 directories:
   buildResources: build
@@ -14,20 +18,17 @@ files:
   - "!**/.DS_Store"
   - "!**/*.map"
 
+# electron-builder's extraResources implicitly excludes node_modules even when
+# you ask it to copy a directory wholesale. Workaround: copy node_modules as
+# its own extraResources entry (where it's treated as a regular path) so the
+# bundled SillyTavern can resolve its production deps at runtime.
 extraResources:
   - from: "resources/sillytavern"
     to: "sillytavern"
-    filter:
-      - "**/*"
-      - "!.git/**"
-      - "!.github/**"
-      - "!docs/**"
-      - "!tests/**"
-      - "!**/*.md"
+  - from: "resources/sillytavern/node_modules"
+    to: "sillytavern/node_modules"
   - from: "resources/node"
     to: "node"
-    filter:
-      - "**/*"
 
 asar: true
 asarUnpack: []

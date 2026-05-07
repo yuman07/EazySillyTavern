@@ -6,6 +6,7 @@
   "main": "src/main.js",
   "private": true,
   "license": "AGPL-3.0",
+  "author": "EazySillyTavern contributors",
   "homepage": "https://github.com/OWNER_PLACEHOLDER/REPO_PLACEHOLDER",
   "repository": {
     "type": "git",

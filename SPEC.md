@@ -428,7 +428,7 @@ interface ServiceState {
 
 ## 十一、验收标准
 
-1. ✅ 在干净的 Windows 11 x64 / macOS 14 arm64 系统（未装过 Node.js）上，下载 + 双击启动 + 进入 SillyTavern 主页 ≤ 15 秒。
+1. ✅ 在干净的 Windows 11 x64 / macOS 15 arm64 系统（未装过 Node.js）上，下载 + 双击启动 + 进入 SillyTavern 主页 ≤ 15 秒。
 2. ✅ 拔掉网线 / 关闭 Wi-Fi 后双击应用，仍能正常启动并进入主页（仅更新检查会失败但不影响主流程）。
 3. ✅ 关闭应用后，系统进程列表（Activity Monitor / 任务管理器）中无 EazySillyTavern 或 SillyTavern 相关进程残留。
 4. ✅ 用应用创建若干角色和对话 → 关闭 → 用新版本（或同版本）覆盖安装 → 重新打开 → 角色和对话完整保留。

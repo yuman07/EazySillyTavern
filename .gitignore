@@ -19,3 +19,28 @@ credentials.json
 .claude/telemetry/
 .claude/history.jsonl
 .claude/settings.local.json
+
+# Node / Electron
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist/
+out/
+*.dmg
+*.exe
+*.zip
+*.blockmap
+
+# Bundled SillyTavern + Node binary (fetched at build time)
+resources/sillytavern/
+resources/node/
+resources/.sillytavern-clone/
+resources/.node-tmp/
+
+# Dev runtime data
+.eazy-dev/
+*.log

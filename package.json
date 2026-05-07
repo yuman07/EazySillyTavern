@@ -1,0 +1,38 @@
+{
+  "name": "eazysillytavern",
+  "productName": "EazySillyTavern",
+  "version": "0.1.0",
+  "description": "Zero-dependency desktop launcher for SillyTavern. Download, double-click, use.",
+  "main": "src/main.js",
+  "private": true,
+  "license": "AGPL-3.0",
+  "homepage": "https://github.com/OWNER_PLACEHOLDER/REPO_PLACEHOLDER",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OWNER_PLACEHOLDER/REPO_PLACEHOLDER.git"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "sillytavern": {
+    "version": "1.18.0",
+    "repository": "https://github.com/SillyTavern/SillyTavern.git"
+  },
+  "bundledNode": {
+    "version": "22.22.2"
+  },
+  "scripts": {
+    "start": "electron .",
+    "prep:node": "node scripts/prep-node.js",
+    "prep:sillytavern": "node scripts/prep-sillytavern.js",
+    "prep": "npm run prep:node && npm run prep:sillytavern",
+    "build:mac": "electron-builder --mac --arm64",
+    "build:win": "electron-builder --win --x64",
+    "release:mac": "npm run prep && npm run build:mac",
+    "release:win": "npm run prep && npm run build:win"
+  },
+  "devDependencies": {
+    "electron": "^38.1.0",
+    "electron-builder": "^26.0.12"
+  }
+}

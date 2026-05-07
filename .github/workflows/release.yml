@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            target: mac-arm64
+            build_script: build:mac
+          - os: windows-2022
+            target: win-x64
+            build_script: build:win
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Electron shell dependencies
+        run: npm install --no-audit --no-fund --no-progress
+
+      - name: Prepare bundled Node + SillyTavern
+        run: npm run prep
+
+      - name: Build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run ${{ matrix.build_script }}
+
+      - name: List build outputs
+        shell: bash
+        run: ls -la dist/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: EazySillyTavern-${{ matrix.target }}
+          path: |
+            dist/EazySillyTavern-*.dmg
+            dist/EazySillyTavern-*.exe
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten artifacts
+        run: |
+          mkdir -p release-assets
+          find artifacts -type f \( -name "*.dmg" -o -name "*.exe" \) -exec cp -v {} release-assets/ \;
+          ls -la release-assets/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true

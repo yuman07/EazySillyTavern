@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;">
+  <title>EazySillyTavern</title>
+  <link rel="stylesheet" href="splash.css">
+</head>
+<body>
+  <main id="root" class="state-loading">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">EST</div>
+      <h1 id="title">Launching EazySillyTavern</h1>
+    </div>
+
+    <div class="loading-block">
+      <div class="spinner" aria-hidden="true"></div>
+      <p id="status">Starting SillyTavern…</p>
+    </div>
+
+    <div class="error-block" hidden>
+      <h2 id="errorTitle">Startup failed</h2>
+      <p id="errorMessage"></p>
+      <div class="actions">
+        <button id="btnViewLog" type="button">View log</button>
+        <button id="btnQuit" type="button" class="secondary">Quit</button>
+      </div>
+    </div>
+  </main>
+  <script src="splash.js"></script>
+</body>
+</html>

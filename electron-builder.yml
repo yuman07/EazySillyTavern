@@ -1,0 +1,65 @@
+appId: com.eazysillytavern.app
+productName: EazySillyTavern
+copyright: Copyright (c) ${author}
+
+directories:
+  buildResources: build
+  output: dist
+
+# Only ship what the Electron shell needs. The SillyTavern bundle goes via extraResources.
+files:
+  - "package.json"
+  - "src/**/*"
+  - "i18n/**/*"
+  - "!**/.DS_Store"
+  - "!**/*.map"
+
+extraResources:
+  - from: "resources/sillytavern"
+    to: "sillytavern"
+    filter:
+      - "**/*"
+      - "!.git/**"
+      - "!.github/**"
+      - "!docs/**"
+      - "!tests/**"
+      - "!**/*.md"
+  - from: "resources/node"
+    to: "node"
+    filter:
+      - "**/*"
+
+asar: true
+asarUnpack: []
+
+# We do NOT sign on either platform. README walks users through Gatekeeper / SmartScreen.
+mac:
+  category: public.app-category.utilities
+  target:
+    - target: dmg
+      arch: arm64
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  identity: null
+  icon: build/icon.png
+  artifactName: "EazySillyTavern-${version}-mac-arm64.${ext}"
+
+dmg:
+  writeUpdateInfo: false
+  artifactName: "EazySillyTavern-${version}-mac-arm64.${ext}"
+
+win:
+  target:
+    - target: portable
+      arch: x64
+  icon: build/icon.png
+  signAndEditExecutable: false
+  artifactName: "EazySillyTavern-${version}-win-x64.${ext}"
+
+portable:
+  artifactName: "EazySillyTavern-${version}-win-x64.${ext}"
+
+# Disable electron-builder's auto-publish; releases are uploaded by GitHub Actions.
+publish: null
+
+# Single-instance, no installer registry footprint on Windows (handled by `portable` target).

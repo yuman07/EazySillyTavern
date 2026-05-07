@@ -12,7 +12,7 @@ EazySillyTavern is a desktop launcher distribution of SillyTavern. The Node runt
 
 ## 下载 Download
 
-请到 [Releases](https://github.com/OWNER_PLACEHOLDER/REPO_PLACEHOLDER/releases/latest) 页面，按系统选择：
+请到 [Releases](https://github.com/yuman07/EazySillyTavern/releases/latest) 页面，按系统选择：
 
 | 系统 / OS | 文件 / File |
 | --- | --- |

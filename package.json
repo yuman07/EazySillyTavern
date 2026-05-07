@@ -7,10 +7,10 @@
   "private": true,
   "license": "AGPL-3.0",
   "author": "EazySillyTavern contributors",
-  "homepage": "https://github.com/OWNER_PLACEHOLDER/REPO_PLACEHOLDER",
+  "homepage": "https://github.com/yuman07/EazySillyTavern",
   "repository": {
     "type": "git",
-    "url": "https://github.com/OWNER_PLACEHOLDER/REPO_PLACEHOLDER.git"
+    "url": "https://github.com/yuman07/EazySillyTavern.git"
   },
   "engines": {
     "node": ">=24"

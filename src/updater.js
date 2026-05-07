@@ -4,8 +4,8 @@ const https = require('node:https');
 const { app, dialog, shell } = require('electron');
 const { t } = require('./i18n');
 
-const REPO_OWNER = 'OWNER_PLACEHOLDER';
-const REPO_NAME = 'REPO_PLACEHOLDER';
+const REPO_OWNER = 'yuman07';
+const REPO_NAME = 'EazySillyTavern';
 const REQUEST_TIMEOUT_MS = 8000;
 
 function fetchLatestRelease() {

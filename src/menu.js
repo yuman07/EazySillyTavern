@@ -21,7 +21,7 @@ function showAboutDialog(parentWindow) {
   const lines = [
     `${t('about.appVersion')}: ${app.getVersion()}`,
     `${t('about.sillyTavernVersion')}: ${stVersion}`,
-    `${t('about.repository')}: https://github.com/OWNER_PLACEHOLDER/REPO_PLACEHOLDER`,
+    `${t('about.repository')}: https://github.com/yuman07/EazySillyTavern`,
     `${t('about.license')}: AGPL-3.0`,
   ];
   dialog.showMessageBox(parentWindow ?? undefined, {

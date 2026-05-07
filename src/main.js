@@ -1,7 +1,7 @@
 'use strict';
 
 const path = require('node:path');
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeTheme, shell } = require('electron');
 
 const i18n = require('./i18n');
 const { Logger } = require('./logger');
@@ -92,17 +92,16 @@ function postToSplash(channel, payload) {
 }
 
 function createMainWindow(serviceUrl) {
-  // Make the OS title bar blend with SillyTavern's dark theme: macOS hides the
-  // chrome and floats traffic lights over the page; Windows paints its window
-  // controls with a matching dark fill.
-  const titleBarOpts = process.platform === 'darwin'
-    ? { titleBarStyle: 'hiddenInset' }
-    : process.platform === 'win32'
-      ? {
-          titleBarStyle: 'hidden',
-          titleBarOverlay: { color: '#111827', symbolColor: '#e5e7eb', height: 32 },
-        }
-      : {};
+  // Make the OS title bar match SillyTavern's dark theme without hiding it:
+  // macOS keeps the native title bar (dark theme is forced via nativeTheme so
+  // it stays dark even on a light-mode system); Windows hides the native bar
+  // and uses titleBarOverlay to paint the controls strip in matching #111827.
+  const titleBarOpts = process.platform === 'win32'
+    ? {
+        titleBarStyle: 'hidden',
+        titleBarOverlay: { color: '#111827', symbolColor: '#e5e7eb', height: 32 },
+      }
+    : {};
   const win = new BrowserWindow({
     width: MAIN_WIDTH,
     height: MAIN_HEIGHT,
@@ -126,14 +125,16 @@ function createMainWindow(serviceUrl) {
   win.loadURL(serviceUrl);
   win.once('ready-to-show', () => win.show());
 
-  // hiddenInset removes the OS drag handle, and Windows' titleBarOverlay only
-  // covers its own button strip — the rest of the top has to be a draggable
-  // region we inject ourselves. Re-inject on every load (SillyTavern is an SPA
-  // but full reloads do happen, e.g. settings changes).
-  const dragRegionScript = buildDragRegionScript();
-  win.webContents.on('did-finish-load', () => {
-    win.webContents.executeJavaScript(dragRegionScript).catch(() => { /* ignore */ });
-  });
+  // Windows' titleBarOverlay only paints its own button strip; the rest of the
+  // top edge is page content and needs a draggable region we inject ourselves.
+  // Re-inject on every load (SillyTavern is an SPA but full reloads do happen,
+  // e.g. settings changes). macOS uses the native title bar and doesn't need this.
+  if (process.platform === 'win32') {
+    const dragRegionScript = buildDragRegionScript();
+    win.webContents.on('did-finish-load', () => {
+      win.webContents.executeJavaScript(dragRegionScript).catch(() => { /* ignore */ });
+    });
+  }
 
   // Open links that target _blank in the system browser, do not let SillyTavern spawn child windows.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -148,12 +149,10 @@ function createMainWindow(serviceUrl) {
 }
 
 function buildDragRegionScript() {
-  // macOS traffic lights occupy roughly the leftmost 78px; leave that gap so
-  // close/minimize/maximize remain clickable. Windows' overlay handles its own
-  // controls, so only the right-edge ~140px is reserved.
-  const leftGap = process.platform === 'darwin' ? 78 : 0;
-  const rightGap = process.platform === 'win32' ? 140 : 0;
-  const height = 28;
+  // Windows-only: titleBarOverlay covers the right-edge button strip (~140px);
+  // the rest of the top has to be a draggable region we inject ourselves.
+  const rightGap = 140;
+  const height = 32;
   return `
     (() => {
       const id = 'eazy-drag-region';
@@ -164,7 +163,7 @@ function buildDragRegionScript() {
       drag.style.cssText = [
         'position:fixed',
         'top:0',
-        'left:${leftGap}px',
+        'left:0',
         'right:${rightGap}px',
         'height:${height}px',
         '-webkit-app-region:drag',
@@ -292,6 +291,9 @@ app.on('before-quit', async (event) => {
 });
 
 app.whenReady().then(() => {
+  // Force dark theme on native chrome (title bar, menus, dialogs) so it
+  // matches SillyTavern's dark UI even when the OS is in light mode.
+  nativeTheme.themeSource = 'dark';
   wireSplashIpc();
   bootstrap().catch((err) => {
     logger?.error(`Bootstrap crashed: ${err.stack || err.message}`);

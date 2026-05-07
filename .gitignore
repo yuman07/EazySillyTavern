@@ -19,6 +19,7 @@ credentials.json
 .claude/telemetry/
 .claude/history.jsonl
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 
 # Node / Electron
 node_modules/

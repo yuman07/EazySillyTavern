@@ -17,6 +17,17 @@ const { silentCheck, showServiceCrashedBanner } = require('./updater');
 // Electron releases and burns a small amount of CPU on every paint.
 app.commandLine.appendSwitch('disable-features', 'Translate,AutofillServerCommunication,CalculateNativeWinOcclusion');
 
+// Keep SillyTavern's renderer fully responsive even when the window is
+// blurred / occluded / minimized. Chromium's defaults throttle setTimeout /
+// setInterval to 1Hz and lower renderer process priority when not foreground —
+// fine for a generic browser, harmful for a chat app that streams tokens and
+// polls model state. The BrowserWindow-level `backgroundThrottling: false`
+// covers timer throttling per-window, but the process-priority and occlusion
+// behaviors only respond to these process-wide switches.
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+
 const SPLASH_WIDTH = 460;
 const SPLASH_HEIGHT = 240;
 const MAIN_WIDTH = 1400;
@@ -120,6 +131,10 @@ function createMainWindow(serviceUrl) {
       // Cache compiled bytecode so SillyTavern's heavy JS bundles parse
       // faster on subsequent reloads (settings change, full refresh, etc.).
       v8CacheOptions: 'code',
+      // Don't throttle SillyTavern's timers when the window is in the
+      // background. Streaming responses, autosave loops, and websocket
+      // keepalives need to keep ticking even if the user is in another app.
+      backgroundThrottling: false,
     },
   });
   win.loadURL(serviceUrl);
@@ -232,8 +247,10 @@ async function bootstrap() {
     }
   });
 
-  setStatus('splash.preparingData');
-  setStatus('splash.pickingPort');
+  // Only the last status before the await would ever be visible — the IPC
+  // sends are synchronous on this side but the renderer applies them in a
+  // single tick before paint, so the user just sees "Spawning…". Keep the
+  // most informative one and drop the noise.
   setStatus('splash.startingService');
 
   const result = await service.start();

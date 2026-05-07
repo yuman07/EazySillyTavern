@@ -14,15 +14,21 @@ function getPaths() {
   if (cached) return cached;
 
   const root = resolveUserDataRoot();
+  const config = path.join(root, 'config');
   cached = {
     root,
     data: path.join(root, 'data'),
     logs: path.join(root, 'logs'),
-    config: path.join(root, 'config'),
+    config,
     sillyTavernConfig: path.join(root, 'data', 'config.yaml'),
+    // Runtime-only persistent cache for the bundled Node's V8 bytecode (NODE_COMPILE_CACHE).
+    // Hidden subdirectory under config/ to stay within SPEC §八's directory layout while
+    // signalling "implementation detail, safe to delete". SillyTavern's startup require()
+    // graph is hundreds of modules; warm runs reuse the cached bytecode and skip parse+compile.
+    nodeCompileCache: path.join(config, '.node-compile-cache'),
   };
 
-  for (const dir of [cached.root, cached.data, cached.logs, cached.config]) {
+  for (const dir of [cached.root, cached.data, cached.logs, cached.config, cached.nodeCompileCache]) {
     fs.mkdirSync(dir, { recursive: true });
   }
   return cached;

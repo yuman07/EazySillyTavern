@@ -5,11 +5,27 @@ const fs = require('node:fs');
 const http = require('node:http');
 const { spawn } = require('node:child_process');
 
-const READY_POLL_INTERVAL_MS = 200;
+// Adaptive readiness polling: SillyTavern's listen() typically resolves between
+// 1–8s. Tight 50ms polling for the first second catches "it was already ready"
+// fast (saves up to ~150ms of perceived launch delay vs a flat 200ms cadence);
+// after that we widen the cadence so a slow cold-disk machine isn't burning
+// CPU on 40+ probes/s. Each tier's window/interval is independently tunable.
+const READY_POLL_TIERS = [
+  { untilMs: 1_000, intervalMs: 50 },
+  { untilMs: 3_000, intervalMs: 100 },
+  { untilMs: Infinity, intervalMs: 200 },
+];
 const READY_POLL_TIMEOUT_MS = 1000;
 const READY_TOTAL_TIMEOUT_MS = 30_000;
 const SHUTDOWN_GRACE_MS = 5_000;
 const PORT_RETRY_LIMIT = 3;
+
+function pollIntervalFor(elapsedMs) {
+  for (const tier of READY_POLL_TIERS) {
+    if (elapsedMs < tier.untilMs) return tier.intervalMs;
+  }
+  return READY_POLL_TIERS[READY_POLL_TIERS.length - 1].intervalMs;
+}
 
 function buildArgs({ port, dataRoot, configPath }) {
   return [
@@ -27,7 +43,7 @@ function buildArgs({ port, dataRoot, configPath }) {
   ];
 }
 
-function buildEnv() {
+function buildEnv(compileCacheDir) {
   // Strip ELECTRON_* keys so the bundled Node binary doesn't think it's running under Electron.
   const cleanEnv = {};
   for (const [k, v] of Object.entries(process.env)) {
@@ -42,12 +58,21 @@ function buildEnv() {
   const nodeOptions = cleanEnv.NODE_OPTIONS
     ? `${ourNodeOptions} ${cleanEnv.NODE_OPTIONS}`
     : ourNodeOptions;
-  return {
+  const env = {
     ...cleanEnv,
     NODE_ENV: 'production',
     NODE_OPTIONS: nodeOptions,
     SILLYTAVERN_ENABLEUSERACCOUNTS: 'false',
   };
+  // Persistent V8 bytecode cache for the bundled Node 24 LTS. SillyTavern's
+  // startup graph is hundreds of CommonJS modules; the first run populates the
+  // cache, every subsequent run skips parse+compile and shaves seconds off the
+  // window between double-click and ready-probe success. Honor an existing
+  // user override (rare; useful for debugging) instead of clobbering it.
+  if (compileCacheDir && !cleanEnv.NODE_COMPILE_CACHE) {
+    env.NODE_COMPILE_CACHE = compileCacheDir;
+  }
+  return env;
 }
 
 function probeOnce(port) {
@@ -70,14 +95,15 @@ async function waitForReady(port, child, signal) {
   while (true) {
     if (signal.aborted) return { status: 'aborted' };
     if (signal.childExited) return { status: 'failed', reason: 'service_crashed' };
-    if (Date.now() - startedAt > READY_TOTAL_TIMEOUT_MS) {
+    const elapsed = Date.now() - startedAt;
+    if (elapsed > READY_TOTAL_TIMEOUT_MS) {
       return { status: 'failed', reason: 'timeout' };
     }
     const probe = await probeOnce(port);
     if (probe.ok) {
       return { status: 'ready' };
     }
-    await new Promise((r) => setTimeout(r, READY_POLL_INTERVAL_MS));
+    await new Promise((r) => setTimeout(r, pollIntervalFor(elapsed)));
   }
 }
 
@@ -151,7 +177,7 @@ class ServiceController {
     try {
       child = spawn(this.nodeBinaryPath, spawnArgs, {
         cwd: this.sillyTavernRoot,
-        env: buildEnv(),
+        env: buildEnv(this.paths.nodeCompileCache),
         stdio: ['ignore', 'pipe', 'pipe'],
         windowsHide: true,
       });

@@ -158,7 +158,10 @@ function pruneNodeModules(rootDir) {
 }
 
 function installProductionDeps(dir) {
-  run('npm', ['install', '--omit=dev', '--omit=optional', '--no-audit', '--no-fund', '--no-progress'], { cwd: dir });
+  // On Windows, npm ships as npm.cmd; Node's execFileSync won't auto-resolve PATHEXT,
+  // so we pick the right binary name explicitly.
+  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  run(npmCmd, ['install', '--omit=dev', '--omit=optional', '--no-audit', '--no-fund', '--no-progress'], { cwd: dir });
 }
 
 function moveDir(from, to) {

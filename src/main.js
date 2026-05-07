@@ -11,6 +11,12 @@ const { ServiceController } = require('./lifecycle');
 const { buildMenu } = require('./menu');
 const { silentCheck, showServiceCrashedBanner } = require('./updater');
 
+// Disable Chromium subsystems EazySillyTavern never uses. Translate prompts
+// and Autofill server pings make no sense in a localhost-only single-page app;
+// CalculateNativeWinOcclusion has caused Windows window-flicker bugs in past
+// Electron releases and burns a small amount of CPU on every paint.
+app.commandLine.appendSwitch('disable-features', 'Translate,AutofillServerCommunication,CalculateNativeWinOcclusion');
+
 const SPLASH_WIDTH = 460;
 const SPLASH_HEIGHT = 240;
 const MAIN_WIDTH = 1400;
@@ -111,6 +117,10 @@ function createMainWindow(serviceUrl) {
       sandbox: true,
       nodeIntegration: false,
       // SillyTavern is served from 127.0.0.1, so default sandboxing is fine.
+      enableWebSQL: false,
+      // Cache compiled bytecode so SillyTavern's heavy JS bundles parse
+      // faster on subsequent reloads (settings change, full refresh, etc.).
+      v8CacheOptions: 'code',
     },
   });
   win.loadURL(serviceUrl);

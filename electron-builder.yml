@@ -6,6 +6,14 @@ copyright: Copyright (c) ${author}
 # 250MB budget for the dmg / portable exe.
 compression: maximum
 
+# Per SPEC §六-8: only zh-* (mapped to zh-CN) and other locales (mapped to en-US)
+# are surfaced. SillyTavern itself supplies its own i18n. Drop Electron's
+# unused locale packs (~44MB on mac, ~10MB on win, ~50 locales total).
+#
+# Note: locale identifiers differ by platform. macOS .lproj basenames use
+# underscores ("zh_CN", "en"), while Windows .pak filenames use BCP-47 hyphens
+# ("zh-CN", "en-US"). Configure each in the platform block below.
+
 directories:
   buildResources: build
   output: dist
@@ -44,6 +52,11 @@ mac:
   identity: null
   icon: build/icon.png
   artifactName: "EazySillyTavern-${version}-mac-arm64.${ext}"
+  electronLanguages:
+    - en
+    - en_GB
+    - zh_CN
+    - zh_TW
 
 dmg:
   writeUpdateInfo: false
@@ -56,6 +69,11 @@ win:
   icon: build/icon.png
   signAndEditExecutable: false
   artifactName: "EazySillyTavern-${version}-win-x64.${ext}"
+  electronLanguages:
+    - en-US
+    - en-GB
+    - zh-CN
+    - zh-TW
 
 portable:
   artifactName: "EazySillyTavern-${version}-win-x64.${ext}"

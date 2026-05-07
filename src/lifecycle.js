@@ -34,9 +34,18 @@ function buildEnv() {
     if (k.startsWith('ELECTRON_')) continue;
     cleanEnv[k] = v;
   }
+  // Cap heap at 2GB (well above SillyTavern's typical footprint) to bound
+  // runaway leaks; silence Node deprecation noise so the child log file stays
+  // focused on SillyTavern's own output. Append to any user-provided
+  // NODE_OPTIONS so we don't clobber an explicit override.
+  const ourNodeOptions = '--max-old-space-size=2048 --no-warnings';
+  const nodeOptions = cleanEnv.NODE_OPTIONS
+    ? `${ourNodeOptions} ${cleanEnv.NODE_OPTIONS}`
+    : ourNodeOptions;
   return {
     ...cleanEnv,
     NODE_ENV: 'production',
+    NODE_OPTIONS: nodeOptions,
     SILLYTAVERN_ENABLEUSERACCOUNTS: 'false',
   };
 }

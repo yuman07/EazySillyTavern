@@ -73,14 +73,30 @@ function prune(dir) {
 // and drop top-level dirs whose names match dropPkgRootDirs.
 function pruneNodeModules(rootDir) {
   if (!fs.existsSync(rootDir)) return;
-  const dropPkgRootDirs = new Set(['test', 'tests', '__tests__', 'example', 'examples', 'docs', '.github', '.vscode', '.idea', 'coverage']);
+  const dropPkgRootDirs = new Set([
+    'test', 'tests', '__tests__', 'example', 'examples', 'docs', '.github',
+    '.vscode', '.idea', 'coverage',
+    // Build-time / test-time artifacts that ship inside some packages.
+    'bench', 'benches', 'benchmark', 'benchmarks',
+    'demo', 'demos', 'samples', 'fixtures', '__fixtures__', '__snapshots__',
+    '.history', '.nyc_output',
+  ]);
   // Files anywhere inside a package that are runtime-irrelevant.
   const dropExts = new Set(['.md', '.markdown', '.map', '.ts', '.tsx', '.flow']);
+  // Files anywhere inside a package whose names match these exact patterns.
+  // Regex form so we can capture wildcards like `*.min.js.LICENSE.txt`.
+  const dropFileRegexes = [
+    /\.min\.js\.LICENSE\.txt$/i,
+    /^NOTICE(\.[A-Za-z0-9]+)?$/,
+    /^LICENSE-[A-Za-z0-9._-]+$/, // keep main LICENSE/LICENCE, drop alt/extra license files
+  ];
   // Top-of-package metadata files only — never recurse for these.
   const dropPkgRootFiles = new Set(['CHANGELOG', 'CHANGELOG.md', 'CHANGES', 'CHANGES.md',
     'HISTORY.md', 'AUTHORS', 'AUTHORS.md', 'CONTRIBUTORS', 'CONTRIBUTORS.md', '.npmignore',
     '.travis.yml', '.eslintrc', '.eslintrc.json', '.prettierrc', 'tsconfig.json',
-    '.editorconfig', '.babelrc', 'jest.config.js', 'karma.conf.js']);
+    '.editorconfig', '.babelrc', 'jest.config.js', 'karma.conf.js',
+    '.gitattributes', '.eslintignore', '.prettierignore', 'rollup.config.js',
+    'webpack.config.js', '.eslintrc.js', '.eslintrc.cjs']);
 
   function pruneInsidePackage(pkgDir) {
     let entries;
@@ -94,7 +110,7 @@ function pruneNodeModules(rootDir) {
         try { fs.unlinkSync(full); } catch { /* ignore */ }
       }
     }
-    // Pass 2: recursively drop ext-matched files in remaining tree.
+    // Pass 2: recursively drop ext-matched and regex-matched files in remaining tree.
     function walkExts(current) {
       let walkEntries;
       try { walkEntries = fs.readdirSync(current, { withFileTypes: true }); } catch { return; }
@@ -102,8 +118,11 @@ function pruneNodeModules(rootDir) {
         const full = path.join(current, entry.name);
         if (entry.isDirectory()) {
           walkExts(full);
-        } else if (entry.isFile() && dropExts.has(path.extname(entry.name).toLowerCase())) {
-          try { fs.unlinkSync(full); } catch { /* ignore */ }
+        } else if (entry.isFile()) {
+          const ext = path.extname(entry.name).toLowerCase();
+          if (dropExts.has(ext) || dropFileRegexes.some((re) => re.test(entry.name))) {
+            try { fs.unlinkSync(full); } catch { /* ignore */ }
+          }
         }
       }
     }

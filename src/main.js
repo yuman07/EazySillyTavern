@@ -1,7 +1,9 @@
 'use strict';
 
 const path = require('node:path');
-const { app, BrowserWindow, ipcMain, nativeTheme, shell } = require('electron');
+const fs = require('node:fs');
+const os = require('node:os');
+const { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } = require('electron');
 
 const i18n = require('./i18n');
 const { Logger } = require('./logger');
@@ -10,6 +12,59 @@ const { pickEphemeralPort } = require('./port');
 const { ServiceController } = require('./lifecycle');
 const { buildMenu } = require('./menu');
 const { silentCheck, showServiceCrashedBanner } = require('./updater');
+
+// SPEC §一-5 ("可自助排错") requires a visible error path even when startup
+// blows up before the splash exists. The in-app Logger only comes online after
+// getPaths() / mkdirSync succeed; if anything before that throws (e.g. portable
+// extraction landed in a path Defender or a security suite blocks from writing),
+// we'd be left with a zombie process and zero feedback. Derive a writable log
+// directory directly from the OS env so we can dump a crash file even without
+// app.getPath(), and pair it with dialog.showErrorBox — one of the few Electron
+// APIs callable before app is ready, so module-load and pre-whenReady throws
+// still surface a native message box.
+function fallbackLogDir() {
+  const root = process.env.APPDATA
+    || (process.platform === 'darwin' ? path.join(os.homedir(), 'Library', 'Application Support') : null)
+    || (process.env.HOME ? path.join(process.env.HOME, '.config') : null)
+    || os.tmpdir();
+  return path.join(root, 'EazySillyTavern', 'logs');
+}
+
+function writeCrashLog(message) {
+  try {
+    const dir = fallbackLogDir();
+    fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, `crash-${Date.now()}.log`);
+    fs.appendFileSync(file, `[${new Date().toISOString()}] ${message}\n`);
+    return file;
+  } catch {
+    return null;
+  }
+}
+
+function reportFatal(prefix, err) {
+  const detail = (err && (err.stack || err.message)) || String(err);
+  const logFile = writeCrashLog(`${prefix}: ${detail}`);
+  try {
+    const tail = logFile ? `\n\nLog: ${logFile}` : '';
+    dialog.showErrorBox('EazySillyTavern failed to start', `${prefix}\n\n${detail}${tail}`);
+  } catch {
+    /* nothing left to do */
+  }
+}
+
+process.on('uncaughtException', (err) => {
+  reportFatal('Uncaught exception', err);
+  // Electron can keep an Electron process alive after an uncaught exception
+  // when no window has opened yet — exactly the "process running, no window"
+  // failure mode this guard exists to prevent. Force-exit so a stuck launch
+  // doesn't leave an invisible zombie process the user has to find in Task Manager.
+  process.exit(1);
+});
+process.on('unhandledRejection', (err) => {
+  reportFatal('Unhandled rejection', err);
+  process.exit(1);
+});
 
 // Disable Chromium subsystems EazySillyTavern never uses. Translate prompts
 // and Autofill server pings make no sense in a localhost-only single-page app;
@@ -56,6 +111,12 @@ app.on('second-instance', () => {
 });
 
 function createSplashWindow() {
+  // Show the splash immediately rather than waiting on `ready-to-show`. On
+  // Windows portable builds we've seen the event silently never fire under
+  // some AV / GPU compositor combinations, leaving the user with the exact
+  // "process running, no window" symptom this code path is supposed to prevent.
+  // backgroundColor matches the splash CSS, so the brief moment before the
+  // HTML paints is a dark window — not a white flash.
   const win = new BrowserWindow({
     width: SPLASH_WIDTH,
     height: SPLASH_HEIGHT,
@@ -64,7 +125,7 @@ function createSplashWindow() {
     movable: true,
     transparent: false,
     backgroundColor: '#111827',
-    show: false,
+    show: true,
     skipTaskbar: false,
     title: 'EazySillyTavern',
     webPreferences: {
@@ -75,7 +136,6 @@ function createSplashWindow() {
     },
   });
   win.loadFile(path.join(__dirname, 'splash', 'splash.html'));
-  win.once('ready-to-show', () => win.show());
   return win;
 }
 
@@ -217,9 +277,29 @@ function wireSplashIpc() {
 }
 
 async function bootstrap() {
-  i18n.init();
-  paths = getPaths();
-  logger = new Logger(paths.logs);
+  // Steps below run before the splash exists; if any throws we have to surface
+  // the failure ourselves (native dialog + crash log), otherwise the app is
+  // invisible to the user. Each step gets its own message because the typical
+  // failure modes are very different: missing i18n bundle, blocked %APPDATA%
+  // directory, or a log file the OS won't open.
+  try {
+    i18n.init();
+  } catch (err) {
+    reportFatal('Failed to load translations', err);
+    process.exit(1);
+  }
+  try {
+    paths = getPaths();
+  } catch (err) {
+    reportFatal('Failed to prepare app data directories', err);
+    process.exit(1);
+  }
+  try {
+    logger = new Logger(paths.logs);
+  } catch (err) {
+    reportFatal('Failed to open startup log', err);
+    process.exit(1);
+  }
   logger.info(`EazySillyTavern ${app.getVersion()} starting (locale=${i18n.getLocale()})`);
   logger.info(`User data root: ${paths.root}`);
 
@@ -313,7 +393,12 @@ app.whenReady().then(() => {
   nativeTheme.themeSource = 'dark';
   wireSplashIpc();
   bootstrap().catch((err) => {
+    // Splash exists by this point if bootstrap got past its early steps, so
+    // try to surface the message there too — but always fall back to a native
+    // dialog so the user can never end up with an invisible failure.
     logger?.error(`Bootstrap crashed: ${err.stack || err.message}`);
     setError('splash.error.unknown');
+    reportFatal('Bootstrap crashed', err);
+    process.exit(1);
   });
 });

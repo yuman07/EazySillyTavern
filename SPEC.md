@@ -43,7 +43,7 @@ EazySillyTavern 不重新实现 SillyTavern 的任何业务逻辑——它是一
 | Node runtime 来源 | **随包附带 Node 24 LTS 官方二进制**（放 `extraResources/node/`）。Electron 自带的 Node 用 BoringSSL，缺 SHA-3 / SHAKE 系列哈希算法（`crypto.createHash('shake256')` 抛 `Error: Digest method not supported`），无法直接跑 SillyTavern 的 webpack 缓存版本计算。CI 在每个平台上下载对应 Node 二进制并装入安装包。本字段为对原 SPEC 假设的修正，实测于 SillyTavern 1.18.0 + Electron 42 |
 | SillyTavern 集成方式 | 仓库 + 完整 `node_modules` 全量预打包，作为 Electron `extraResources` |
 | SillyTavern 版本基准 | 锁定一个具体的 SillyTavern release tag，每个 EazySillyTavern 版本对应一个 SillyTavern 版本 |
-| 服务端口 | 每次启动随机选取一个空闲高位端口（49152-65535） |
+| 服务端口 | 每次启动随机选取空闲端口；优先 IANA 动态端口段（49152-65535），OS 不在该段范围内分配端口时回退接受任意空闲端口 |
 | 服务监听地址 | 强制 `127.0.0.1`，不允许外网访问 |
 | 内置认证 | basicAuth、userAccounts 默认全部关闭 |
 | 多实例策略 | 单实例锁，第二次启动时激活已有窗口 |
@@ -361,12 +361,12 @@ interface ServiceState {
 #### 运行机制
 
 ```
-1. 端口范围限定在动态端口段 49152–65535（IANA 为临时端口预留）
-2. 用 Node 的 net 模块向 OS 申请一个空闲端口：
+1. 用 Node 的 net 模块向 OS 申请一个空闲端口：
    const server = net.createServer()
    server.listen(0, '127.0.0.1')  // port=0 让 OS 分配
    const port = server.address().port
    server.close()
+2. 优先 IANA 动态端口段（49152-65535）：拿到的端口在段内直接用；不在段内则重试，连续若干次仍拿不到段内端口时回退接受 OS 给的端口。少数 Windows 环境（dynamic port range 被改、有 winsock 过滤器等）会持续给非动态端口，此时启动器选择「能用」优于「严格合规」——因为服务只对 127.0.0.1 监听、每次随机重选，非动态端口在功能上完全等价
 3. 立即把 port 传给 SillyTavern 子进程作为监听端口
 4. 失败兜底：
    - 极小概率出现 port=0 申请到的端口刚 close 就被别人占用（TOCTOU 竞态）

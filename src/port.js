@@ -34,11 +34,15 @@ function pickPortOnce() {
   });
 }
 
-// SPEC §四 wants the dynamic range (49152-65535). The OS almost always hands
-// those out for listen(0), but on the rare occasion it doesn't we retry a
-// bounded number of times instead of recursing forever — a runaway recursion
-// here was previously possible if every attempt fell outside the range.
+// SPEC §七-2: prefer the IANA dynamic range (49152-65535), but accept any
+// free port the OS hands out as a fallback. On a small minority of Windows
+// machines (custom dynamic port range, winsock filters from security software)
+// listen(0) consistently returns ports outside the dynamic range; rejecting
+// in that case bricks the launcher even though the chosen port is functionally
+// fine — we only ever bind 127.0.0.1 and re-pick on every launch, so the high
+// vs. low distinction is hygiene, not correctness.
 async function pickEphemeralPort() {
+  let fallbackPort = null;
   let lastErr = null;
   for (let i = 0; i < MAX_RANGE_RETRIES; i++) {
     let port;
@@ -49,8 +53,9 @@ async function pickEphemeralPort() {
       continue;
     }
     if (port >= MIN && port <= MAX) return port;
-    lastErr = new Error(`OS allocated port ${port} outside dynamic range ${MIN}-${MAX}`);
+    fallbackPort = port;
   }
+  if (fallbackPort != null) return fallbackPort;
   throw lastErr ?? new Error('Failed to allocate an ephemeral port');
 }
 

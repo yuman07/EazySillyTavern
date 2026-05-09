@@ -255,6 +255,12 @@ async function bootstrap() {
 
   const result = await service.start();
 
+  if (result.status === 'aborted') {
+    // User asked to quit before the service came up. before-quit is already
+    // tearing things down — don't paint an error on a splash that's about
+    // to disappear.
+    return;
+  }
   if (result.status !== 'ready') {
     const errorKey = mapFailureKey(result.reason);
     setError(errorKey);

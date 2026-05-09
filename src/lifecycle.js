@@ -134,6 +134,7 @@ class ServiceController {
     for (let attempt = 1; attempt <= PORT_RETRY_LIMIT; attempt++) {
       const result = await this._startOnce(attempt);
       if (result.status === 'ready') return result;
+      if (result.status === 'aborted') return result;
       lastError = result;
       // Only retry if the failure was port-related (child crashed immediately with EADDRINUSE).
       if (result.reason !== 'service_crashed') break;
@@ -221,6 +222,14 @@ class ServiceController {
       this.state.readyAt = Date.now();
       this.logger.info(`SillyTavern ready on port ${port} after ${this.state.readyAt - this.state.startedAt} ms`);
       return { status: 'ready', port };
+    }
+    if (result.status === 'aborted') {
+      // User-initiated shutdown that landed mid-startup. stop() already
+      // closed the logger and is killing the child, so any work here would
+      // race that path — the previous version logged via the now-closed
+      // stream and crashed with ERR_STREAM_WRITE_AFTER_END. Bail quietly.
+      this.state.status = 'exited';
+      return { status: 'aborted' };
     }
     this.state.status = 'failed';
     this.state.failureReason = result.reason;

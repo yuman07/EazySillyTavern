@@ -39,9 +39,16 @@ class Logger {
     rollOldLogs(logsDir);
     this.filePath = path.join(logsDir, `startup-${timestampForFilename()}.log`);
     this.stream = fs.createWriteStream(this.filePath, { flags: 'a' });
+    this.closed = false;
   }
 
   _write(level, msg) {
+    // Quitting mid-startup races: before-quit calls close() while
+    // service.start()'s call stack may still queue one more log line, and
+    // writing past the stream's end throws ERR_STREAM_WRITE_AFTER_END as an
+    // uncaughtException. Drop post-close lines silently — by then we've
+    // committed to shutting down and a missing log line costs nothing.
+    if (this.closed) return;
     const line = `[${new Date().toISOString()}] [${level}] ${msg}\n`;
     this.stream.write(line);
     if (HAS_CONSOLE) {
@@ -66,6 +73,7 @@ class Logger {
   }
 
   close() {
+    this.closed = true;
     try { this.stream.end(); } catch { /* ignore */ }
   }
 }

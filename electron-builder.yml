@@ -19,10 +19,15 @@ directories:
   output: dist
 
 # Only ship what the Electron shell needs. The SillyTavern bundle goes via extraResources.
+# build/icon.png is also pulled in: directories.buildResources keeps it accessible
+# at build time for .exe / .icns generation, but those embeddings don't surface as
+# the BrowserWindow taskbar icon on Windows — main.js needs a path it can read at
+# runtime, so it goes into the asar too.
 files:
   - "package.json"
   - "src/**/*"
   - "i18n/**/*"
+  - "build/icon.png"
   - "!**/.DS_Store"
   - "!**/*.map"
 

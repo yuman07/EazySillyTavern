@@ -55,6 +55,15 @@ app.on('second-instance', () => {
   }
 });
 
+// Windows taskbar otherwise picks up Electron's default atom icon for our
+// BrowserWindows. The .ico embedded in the .exe by electron-builder controls
+// the file icon in Explorer, not the live window icon — that's the BrowserWindow
+// `icon` option. Resolved off app.getAppPath() so it works the same in dev and
+// inside the packaged asar (build/icon.png is included via electron-builder.yml).
+function getAppIconPath() {
+  return path.join(app.getAppPath(), 'build', 'icon.png');
+}
+
 function createSplashWindow() {
   const win = new BrowserWindow({
     width: SPLASH_WIDTH,
@@ -67,6 +76,7 @@ function createSplashWindow() {
     show: false,
     skipTaskbar: false,
     title: 'EazySillyTavern',
+    icon: getAppIconPath(),
     webPreferences: {
       preload: path.join(__dirname, 'preload', 'splash-preload.js'),
       contextIsolation: true,
@@ -121,6 +131,7 @@ function createMainWindow(serviceUrl) {
     show: false,
     backgroundColor: '#111827',
     title: 'EazySillyTavern',
+    icon: getAppIconPath(),
     ...titleBarOpts,
     webPreferences: {
       contextIsolation: true,

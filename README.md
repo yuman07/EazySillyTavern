@@ -41,7 +41,7 @@ EazySillyTavern does **not** reimplement any SillyTavern feature. The UI, charac
 
 - **Zero-dependency launch** — no Node install, no terminal, no env vars. SillyTavern + Node 24 LTS + Electron in one installer.
 - **Single-instance lock** — a second double-click focuses the existing window instead of starting another copy.
-- **Truly local** — SillyTavern is bound to `127.0.0.1` on a random ephemeral port (49152–65535). Nothing is exposed to your LAN, ever.
+- **Truly local** — SillyTavern is bound to `127.0.0.1` on a random free port the OS picks at launch. Nothing is exposed to your LAN, ever.
 - **Persistent data** — characters, chats, secrets and presets live in the OS user-data directory. Reinstalling, upgrading or moving to a new EazySillyTavern release never loses data.
 - **Bilingual launcher UI** — splash, menus, About box and update banner pick up English / Chinese (Simplified + Traditional) automatically from `app.getLocale()`. Manual switching is intentionally not exposed.
 - **Adaptive readiness probe** — tight 50 ms HTTP polling for the first second, widening to 200 ms — typical launches reach the main window 1–8 s after double-click without burning CPU on slow machines.
@@ -277,7 +277,7 @@ flowchart TD
 
 | Resource | Source | Constraint |
 | --- | --- | --- |
-| Random ephemeral port | `net.createServer().listen(0, '127.0.0.1')` | IANA dynamic range 49152–65535; OS picks; we close immediately. |
+| Random ephemeral port | `net.createServer().listen(0, '127.0.0.1')` | OS picks any free port; we close immediately. |
 | Probe target | `GET http://127.0.0.1:{port}/` | Any HTTP response (200 / 302 / 401) counts as ready. |
 | Total budget | 30 s wall clock | Covers HDD + AV-scan worst case; longer is "give up and surface error". |
 | Poll cadence | 50 ms (0–1 s), 100 ms (1–3 s), 200 ms (3 s+) | Tight early polling captures fast launches; widens to bound CPU on slow machines. |
@@ -297,7 +297,7 @@ Time complexity is `O(elapsed/interval)` probes — typically 30 to 80 in practi
 
 | Resource | Source | Constraint |
 | --- | --- | --- |
-| Candidate port | OS-allocated via `listen(0)` | Always in dynamic range, always free at allocation time. |
+| Candidate port | OS-allocated via `listen(0)` | Free at allocation time; no range constraint — whatever the kernel hands out. |
 | Race window | TOCTOU between our `close()` and the child's `listen()` | A different process can grab the port; child crashes with `EADDRINUSE`. |
 | Retry budget | 3 attempts, only on `service_crashed` reason | Other failures (`fork_failed`, `missing_bundle`) don't recover by retrying. |
 
@@ -305,8 +305,9 @@ Time complexity is `O(elapsed/interval)` probes — typically 30 to 80 in practi
 
 - **Why not a fixed port** — fixing 8000 (SillyTavern's default) collides with users running SillyTavern from source on the same machine, plus any other dev server. The cost is one trivial OS call per launch; the benefit is "no port conflict" as a hard guarantee for the non-technical user.
 - **Why `listen(0)` instead of a hand-rolled scanner** — letting the kernel pick avoids a TOCTOU racier than the one we already have, and the kernel never returns a port that's currently in use. The remaining race is the few microseconds between our `close()` and the child binding — that's where the retry exists.
+- **Why no range filter** — the IANA dynamic range (49152–65535) is hygiene, not correctness: we only ever bind `127.0.0.1` and re-pick on every launch, so a low-numbered port works identically. Some Windows boxes (custom dynamic-port range, winsock filters) consistently return ports below 49152; rejecting those would brick the launcher for no functional gain.
 - **Why retry only on `service_crashed`** — a `fork_failed` or `missing_bundle` (Node binary or SillyTavern source missing) is not a port problem and won't fix itself. Retrying those would just delay the inevitable error message.
-- **Why 3 attempts** — empirically, the TOCTOU race in the dynamic-port range fires far below 1% of the time. Three independent rolls drop the chance of three consecutive losses below `1e-6`, well within "good enough for a desktop launcher".
+- **Why 3 attempts** — empirically, the `close()`-to-`listen()` TOCTOU fires far below 1% of the time. Three independent rolls drop the chance of three consecutive losses below `1e-6`, well within "good enough for a desktop launcher".
 
 ### Why a separate bundled Node binary
 

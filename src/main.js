@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('node:fs');
 const path = require('node:path');
 const { app, BrowserWindow, ipcMain, nativeTheme, shell } = require('electron');
 
@@ -239,6 +240,14 @@ async function bootstrap() {
   logger.info(`SillyTavern resource path: ${stRoot}`);
   logger.info(`Bundled Node binary: ${nodeBinaryPath}`);
 
+  // First run = SillyTavern hasn't yet populated dataRoot. Its default-user
+  // directory is created on initial launch when the bundled default content
+  // (~150 files: backgrounds, presets, characters) is copied in. That copy +
+  // first-time webpack compile of frontend libs is what blows past the warm
+  // launch budget on Windows portable / cold disks.
+  const firstRun = !fs.existsSync(path.join(paths.data, 'default-user'));
+  if (firstRun) logger.info('First run detected — surfacing the slow-startup hint.');
+
   splashWindow = createSplashWindow();
 
   buildMenu({ logger, paths, getMainWindow: () => mainWindow });
@@ -263,6 +272,7 @@ async function bootstrap() {
   // single tick before paint, so the user just sees "Spawning…". Keep the
   // most informative one and drop the noise.
   setStatus('splash.startingService');
+  if (firstRun) postToSplash('splash:hint', i18n.t('splash.firstRun.hint'));
 
   const result = await service.start();
 

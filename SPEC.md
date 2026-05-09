@@ -334,8 +334,8 @@ interface ServiceState {
    - 其他网络错误 → 记日志，继续轮询
 3. 同时监听子进程退出事件：
    - 子进程在轮询期间退出（exit 或 error）→ status = 'failed', 退出循环
-4. 总超时 30 秒：
-   - 30 秒后仍未 ready 也未 failed → status = 'failed', failureReason = 'startup timeout'
+4. 总超时 90 秒：
+   - 90 秒后仍未 ready 也未 failed → status = 'failed', failureReason = 'startup timeout'
 5. 根据最终 status 决定下一步：
    - 'ready'  → 关 splash, 主窗 loadURL
    - 'failed' → splash 显示错误 + 「查看日志」按钮
@@ -348,7 +348,7 @@ interface ServiceState {
 #### 边界与约束
 
 - 轮询间隔 200ms：太密会浪费 CPU（启动 8 秒就是 40 次请求），太疏会增加用户感知延迟。200ms 是经验值。
-- 总超时 30 秒：覆盖到老旧 HDD + 杀软扫描的极端场景。
+- 总超时 90 秒：覆盖 Windows portable .exe 首次启动的最坏路径（7-Zip SFX 自解压 + Defender 扫描 + SillyTavern 复制 ~150 个默认内容文件 + webpack 首次编译前端 lib，叠加可达 60s+）。warm run 通常 1–3 秒就绪，超时只对冷路径生效。
 - 子进程崩溃要尽快感知：通过 `child.on('exit')` 事件，而非依赖轮询超时。
 - 服务就绪后不再持续探测——SillyTavern 自身崩溃由 `child.on('exit')` 兜底处理。
 

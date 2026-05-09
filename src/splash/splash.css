@@ -44,8 +44,15 @@ h1 {
 
 .loading-block {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
+}
+
+.loading-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
 }
 
 .spinner {
@@ -65,6 +72,13 @@ h1 {
   margin: 0;
   font-size: 13px;
   color: #d4d4d8;
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: #9ca3af;
+  line-height: 1.45;
 }
 
 .error-block {

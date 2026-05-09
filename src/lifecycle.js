@@ -16,7 +16,12 @@ const READY_POLL_TIERS = [
   { untilMs: Infinity, intervalMs: 200 },
 ];
 const READY_POLL_TIMEOUT_MS = 1000;
-const READY_TOTAL_TIMEOUT_MS = 30_000;
+// 90s covers the worst observed cold path: Windows portable .exe self-extracts to %TEMP%
+// (Defender real-time scan in the loop), SillyTavern's first run copies ~150 default
+// content files into dataRoot, then webpack compiles its frontend libs (~7s on its own).
+// On warm runs all of that is skipped and the listen probe answers in ~1–3s — but the
+// timeout has to be sized for the worst case, not the typical one.
+const READY_TOTAL_TIMEOUT_MS = 90_000;
 const SHUTDOWN_GRACE_MS = 5_000;
 const PORT_RETRY_LIMIT = 3;
 

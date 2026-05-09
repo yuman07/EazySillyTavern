@@ -2,6 +2,7 @@
 
 const root = document.getElementById('root');
 const statusEl = document.getElementById('status');
+const hintEl = document.getElementById('hint');
 const titleEl = document.getElementById('title');
 const errorTitleEl = document.getElementById('errorTitle');
 const errorMessageEl = document.getElementById('errorMessage');
@@ -24,6 +25,11 @@ window.eazyApi.onStrings((strings) => {
 
 window.eazyApi.onStatus((message) => {
   statusEl.textContent = message;
+});
+
+window.eazyApi.onHint((message) => {
+  hintEl.textContent = message;
+  hintEl.hidden = !message;
 });
 
 window.eazyApi.onError((message) => {

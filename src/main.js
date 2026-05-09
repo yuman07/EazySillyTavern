@@ -114,16 +114,12 @@ function postToSplash(channel, payload) {
 }
 
 function createMainWindow(serviceUrl) {
-  // Make the OS title bar match SillyTavern's dark theme without hiding it:
-  // macOS keeps the native title bar (dark theme is forced via nativeTheme so
-  // it stays dark even on a light-mode system); Windows hides the native bar
-  // and uses titleBarOverlay to paint the controls strip in matching #111827.
-  const titleBarOpts = process.platform === 'win32'
-    ? {
-        titleBarStyle: 'hidden',
-        titleBarOverlay: { color: '#111827', symbolColor: '#e5e7eb', height: 32 },
-      }
-    : {};
+  // Both platforms use the OS-native title bar. Dark mode is forced via
+  // nativeTheme.themeSource = 'dark' so the bar stays dark even on a
+  // light-mode system. We previously hid the Windows bar and painted a
+  // titleBarOverlay strip + injected a -webkit-app-region: drag overlay,
+  // but the overlay sat on top of SillyTavern's top-row icons (settings,
+  // characters, extensions) and ate every click in that 32px band.
   const win = new BrowserWindow({
     width: MAIN_WIDTH,
     height: MAIN_HEIGHT,
@@ -133,7 +129,6 @@ function createMainWindow(serviceUrl) {
     backgroundColor: '#111827',
     title: 'EazySillyTavern',
     icon: getAppIconPath(),
-    ...titleBarOpts,
     webPreferences: {
       contextIsolation: true,
       sandbox: true,
@@ -152,17 +147,6 @@ function createMainWindow(serviceUrl) {
   win.loadURL(serviceUrl);
   win.once('ready-to-show', () => win.show());
 
-  // Windows' titleBarOverlay only paints its own button strip; the rest of the
-  // top edge is page content and needs a draggable region we inject ourselves.
-  // Re-inject on every load (SillyTavern is an SPA but full reloads do happen,
-  // e.g. settings changes). macOS uses the native title bar and doesn't need this.
-  if (process.platform === 'win32') {
-    const dragRegionScript = buildDragRegionScript();
-    win.webContents.on('did-finish-load', () => {
-      win.webContents.executeJavaScript(dragRegionScript).catch(() => { /* ignore */ });
-    });
-  }
-
   // Open links that target _blank in the system browser, do not let SillyTavern spawn child windows.
   win.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
@@ -173,33 +157,6 @@ function createMainWindow(serviceUrl) {
     isQuitting = true;
   });
   return win;
-}
-
-function buildDragRegionScript() {
-  // Windows-only: titleBarOverlay covers the right-edge button strip (~140px);
-  // the rest of the top has to be a draggable region we inject ourselves.
-  const rightGap = 140;
-  const height = 32;
-  return `
-    (() => {
-      const id = 'eazy-drag-region';
-      if (document.getElementById(id)) return;
-      const root = document.documentElement;
-      const drag = document.createElement('div');
-      drag.id = id;
-      drag.style.cssText = [
-        'position:fixed',
-        'top:0',
-        'left:0',
-        'right:${rightGap}px',
-        'height:${height}px',
-        '-webkit-app-region:drag',
-        'z-index:2147483647',
-        'pointer-events:auto',
-      ].join(';');
-      root.appendChild(drag);
-    })();
-  `;
 }
 
 function setStatus(key, vars) {
